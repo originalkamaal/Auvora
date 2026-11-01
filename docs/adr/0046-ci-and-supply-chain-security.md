@@ -49,7 +49,7 @@ If GitHub Actions is compromised or unavailable for > 72 h, or SLSA L3 becomes u
 
 ## Implementation notes
 
-P0 deliverable (all of it before any feature code). Files: `.github/workflows/{ci,release,nightly-fuzz,repro}.yml`, `deny.toml`, `supply-chain/` (cargo-vet), `renovate.json`.
+P0 deliverable (all of it before any feature code). Files: `.github/workflows/{ci,release,nightly-fuzz,repro}.yml`, `.deny.toml`, `.cargo/supply-chain/` (cargo-vet store, via `[workspace.metadata.vet]`), `.github/renovate.json`. Tool configs live in dotfiles or `.github/` so the root stays within the ADR-0111 closed set.
 
 ## Verification
 

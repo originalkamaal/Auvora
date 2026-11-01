@@ -1,0 +1,13 @@
+# ADR-0047: tests may unwrap/expect; production code may not.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+
+# ADR-0047 §10: wall-clock time only via auvora_core::time::Clock.
+disallowed-methods = [
+  { path = "std::time::SystemTime::now", reason = "inject auvora_core::time::Clock instead (ADR-0047 §10)" },
+  { path = "uuid::Uuid::now_v7", reason = "use auvora_core::id generators with an injected Clock (ADR-0018)", allow-invalid = true },
+]
+
+# Domain terms that are not code identifiers ("..": keep clippy defaults).
+doc-valid-idents = ["..", "UUIDv7", "IdP", "IdPs", "OAuth", "OpenID", "PostgreSQL", "WebAuthn", "SAML", "SCIM", "ReBAC", "AuthZEN"]

@@ -1,0 +1,7 @@
+# Pinned developer toolchain (ADR-0023 §7). Rust itself is pinned in rust-toolchain.toml.
+[tools]
+rust = "1.99.1"
+node = "26.7.0"
+pnpm = "10.6.5"
+just = "1.59.0"
+"aqua:EmbarkStudios/cargo-deny" = "0.20.2"

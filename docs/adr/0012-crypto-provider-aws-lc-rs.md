@@ -60,7 +60,7 @@ If aws-lc-rs loses active maintenance or FIPS validation lapses without renewal 
 ## Implementation notes
 
 - P0: `auvora-crypto` facade, `auvora-jose` skeleton with fuzz targets, CI build matrix (`default`, `fips`).
-- `deny.toml` bans `ring`, `openssl`, `openssl-sys` outside the SAML worker crate.
+- `.deny.toml` bans `ring`, `openssl`, `openssl-sys` outside the SAML worker crate.
 
 ## Verification
 

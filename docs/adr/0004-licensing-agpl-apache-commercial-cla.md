@@ -57,7 +57,7 @@ If AGPL demonstrably blocks adoption (tracked as ≥ 10 documented lost evaluati
 ## Implementation notes
 
 - P0: add license files, REUSE compliance, the CLA bot (CLA Assistant or equivalent), and `cargo-deny` license allowlists per workspace area.
-- `cargo-deny` configs: `deny.toml` (server), `packages/.licensee.json` (JS).
+- `cargo-deny` configs: `.deny.toml` (server), `packages/.licensee.json` (JS).
 
 ## Verification
 

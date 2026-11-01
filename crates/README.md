@@ -10,4 +10,5 @@ Rust workspace members that make up the `auvora` binary. One crate per plan §5.
 
 | Path | Purpose |
 |---|---|
-| — | Nothing yet. Add a row here in the same commit as each new entry. |
+| [`auvora-core/`](auvora-core/) | Domain primitives: prefixed UUIDv7 IDs (ADR-0018), injectable `Clock` (ADR-0047) |
+| [`auvora-server/`](auvora-server/) | The `auvora` binary; wires roles together (ADR-0005) |

@@ -1,0 +1,43 @@
+# cargo-deny policy (ADR-0004 licenses, ADR-0012 crypto bans, ADR-0046 supply chain).
+
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[licenses]
+version = 2
+confidence-threshold = 0.93
+unused-allowed-license = "allow"
+# ADR-0004: permissive licenses plus file-level MPL-2.0. LGPL is allowed only
+# for dynamically linked libxmlsec1 in the SAML worker (added with that crate).
+allow = [
+  "AGPL-3.0-only",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "Unicode-3.0",
+  "MPL-2.0",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true  # internal path deps between unpublished workspace crates
+# ADR-0012: aws-lc-rs is the only crypto provider; no OpenSSL in the main process.
+deny = [
+  { name = "ring", reason = "ADR-0012: aws-lc-rs is the single crypto provider" },
+  { name = "openssl", reason = "ADR-0012: no OpenSSL in the main process" },
+  { name = "openssl-sys", reason = "ADR-0012: no OpenSSL in the main process" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

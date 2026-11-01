@@ -1,0 +1,5 @@
+# ADR-0047: stable Rust pinned; MSRV = latest stable - 2 minors (see Cargo.toml rust-version).
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
