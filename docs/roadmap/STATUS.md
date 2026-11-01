@@ -27,7 +27,7 @@ Update this file in the same commit that completes a deliverable. Link evidence 
 | 15 | `auvora-crypto` (KeyProvider: local + AWS KMS) and `auvora-jose` skeletons with fuzz targets | Todo | |
 | 16 | Conformance harness (OIDF suite container) and bench harness | Todo | |
 | 17 | Spikes with go/no-go reports: samael interop (5 IdPs), webauthn-rs, CEL hardening, wasmtime limits, Cedar entity loading | Todo | |
-| 18 | Brand assets placement (logo) | Todo (owner decision) | |
+| 18 | Brand assets placement (logo) | Done | [ADR-0113](../adr/0113-brand-assets-location.md), [`docs/brand/`](../brand/README.md) |
 
 ### Exit criteria
 

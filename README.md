@@ -1,6 +1,12 @@
-# Auvora
+<p align="center">
+  <img src="docs/brand/logo-mark.jpeg" alt="Auvora logo" width="140">
+</p>
 
-**One identity platform for authentication, authorization, federation, and machine, workload and AI-agent identity.** It ships as a single Rust binary that needs only PostgreSQL to run.
+<h1 align="center">Auvora</h1>
+
+<p align="center"><strong>One identity platform for authentication, authorization, federation, and machine, workload and AI-agent identity.</strong><br>It ships as a single Rust binary that needs only PostgreSQL to run.</p>
+
+---
 
 > **Status:** Phase 0 (foundations). There is no usable release yet. Progress: [`docs/roadmap/STATUS.md`](docs/roadmap/STATUS.md). Phase plan: [`docs/product/plan.md`](docs/product/plan.md) §27.
 

@@ -4,7 +4,7 @@
 - **Date:** 2026-11-01
 - **Deciders:** Kamaal Khan (owner)
 - **Plan refs:** plan.md §5.5, §29
-- **Related:** ADR-0000, ADR-0023, ADR-0048, ADR-0049, ADR-0107, ADR-0112
+- **Related:** ADR-0000, ADR-0023, ADR-0048, ADR-0049, ADR-0107, ADR-0112; amended by ADR-0113 (adds `docs/brand/`)
 
 ## Context
 
@@ -45,6 +45,7 @@ docs/
 ├── roadmap/         STATUS.md (phase status), phase exit criteria tracking
 ├── releases/        Release notes and phase exit reports
 ├── runbooks/        Operational runbooks (incident, key compromise, DR)
+├── brand/           Brand assets and usage terms (added by ADR-0113)
 └── site/            Public documentation site (Astro Starlight, ADR-0048)
 ```
 

@@ -12,6 +12,7 @@ This is the map of all documentation in the repository. Placement rules are in [
 | [`roadmap/`](roadmap/README.md) | Phase status ([`STATUS.md`](roadmap/STATUS.md)) and exit-criteria tracking | Active |
 | `releases/` | Release notes and phase exit reports | Created at first release |
 | `runbooks/` | Operational runbooks (incident, key compromise, DR) | Created in P1 |
+| [`brand/`](brand/README.md) | Logo and brand assets (canonical source) and usage terms ([ADR-0113](adr/0113-brand-assets-location.md)) | Active |
 | `site/` | Public documentation site (Astro Starlight, ADR-0048) | Created in P3 |
 
 When you create a directory listed as "Created in…", add its `README.md` and change its status here in the same commit.

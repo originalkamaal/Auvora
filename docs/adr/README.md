@@ -189,3 +189,4 @@ ADR-0001…0060 = Decision Register D01…D60. ADR-0061+ = further decisions fro
 | [0108](0108-vulnerability-disclosure-and-advisories.md) | Vulnerability disclosure and advisories | Accepted |
 | [0111](0111-repository-organization-and-file-placement.md) | Repository organization and file placement | Accepted |
 | [0112](0112-commit-policy.md) | Commit policy | Accepted |
+| [0113](0113-brand-assets-location.md) | Brand assets location (amends ADR-0111) | Accepted |
