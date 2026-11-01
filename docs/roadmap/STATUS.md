@@ -17,7 +17,7 @@ Update this file in the same commit that completes a deliverable. Link evidence 
 | 5 | ID scheme implementation (ADR-0018) and `Clock` | Done | `crates/auvora-core` |
 | 6 | Repository checks + commit-msg hook (ADR-0000/0111/0112), `justfile` | Done | `scripts/`, `justfile` |
 | 7 | CI: fmt, clippy, test, deny, docs, commits | Done (first run pending push) | `.github/workflows/ci.yml` |
-| 8 | Supply chain extras: cargo-vet, SBOM, gitleaks, Renovate, signed releases, reproducible builds, `release-gate` job (ADR-0046, ADR-0001) | Todo | |
+| 8 | Supply chain extras (ADR-0046, ADR-0001) | Partial: cargo-vet, gitleaks, Renovate done; SBOM, signed releases, reproducible builds and the `release-gate` job come with the release workflow | `.cargo/supply-chain/`, `.gitleaksignore`, `.github/renovate.json` |
 | 9 | CLA process published (ADR-0004) | Todo | |
 | 10 | Domain model spec + ERD | Done (Draft) | [`docs/specs/domain-model.md`](../specs/domain-model.md) |
 | 11 | Tenancy/RLS design spec, incl. isolation property tests plan (ADR-0017) | Done (Draft) | [`docs/specs/tenancy-rls.md`](../specs/tenancy-rls.md) |

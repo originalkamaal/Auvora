@@ -1,0 +1,16 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Dependency updates (ADR-0046). Actions stay pinned by SHA; updates arrive as reviewable PRs that must pass cargo-deny and cargo-vet.",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", ":semanticCommits"],
+  "schedule": ["before 6am on monday"],
+  "timezone": "Asia/Kolkata",
+  "labels": ["dependencies"],
+  "commitMessagePrefix": "build(deps):",
+  "lockFileMaintenance": { "enabled": true, "schedule": ["before 6am on monday"] },
+  "vulnerabilityAlerts": { "enabled": true, "schedule": ["at any time"], "labels": ["security"] },
+  "packageRules": [
+    { "matchManagers": ["github-actions"], "groupName": "github actions" },
+    { "matchManagers": ["mise"], "groupName": "toolchain (mise)" },
+    { "matchManagers": ["cargo"], "matchUpdateTypes": ["minor", "patch"], "groupName": "cargo minor and patch" }
+  ]
+}

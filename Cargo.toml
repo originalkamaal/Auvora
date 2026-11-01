@@ -35,3 +35,7 @@ print_stderr = "warn"
 lto = "thin"
 codegen-units = 1
 strip = "symbols"
+
+# ADR-0046: cargo-vet audit store kept under .cargo/ (ADR-0111 closed root set).
+[workspace.metadata.vet]
+store = { path = "./.cargo/supply-chain" }

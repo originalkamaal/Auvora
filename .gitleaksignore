@@ -1,0 +1,3 @@
+# False positives only (ADR-0046). Each entry needs a reason comment.
+# Mermaid ERD edge label in docs/specs/domain-model.md, not a credential.
+f7a60e62be642cf060a936955f1e16a30afe5cd3:docs/specs/domain-model.md:generic-api-key:594

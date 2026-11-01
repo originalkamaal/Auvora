@@ -30,12 +30,23 @@ jobs:
       - run: just test
 
   supply-chain:
-    name: supply chain (cargo-deny)
+    name: supply chain (cargo-deny, cargo-vet)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
       - run: just deny
+      - run: just vet
+
+  secrets:
+    name: secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+      - run: just secrets
 
   repository:
     name: repository rules (ADRs, layout, commits)

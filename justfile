@@ -28,6 +28,14 @@ test:
 deny:
     cargo deny check
 
+# Dependency audits against trusted audit sets (ADR-0046).
+vet:
+    cargo vet --locked
+
+# Secret scanning over the full git history (ADR-0046).
+secrets:
+    gitleaks git --no-banner --redact .
+
 # Repository and documentation rules (ADR-0000, ADR-0111).
 check-docs:
     scripts/check-adrs
@@ -38,7 +46,7 @@ check-commits range="origin/main..HEAD":
     scripts/check-commits {{range}}
 
 # Everything CI runs locally. Run before every commit.
-check: fmt-check lint test deny check-docs
+check: fmt-check lint test deny vet secrets check-docs
 
 # Run the auvora binary, e.g. `just run version`.
 run *args:
