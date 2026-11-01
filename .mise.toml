@@ -1,6 +1,6 @@
-# Pinned developer toolchain (ADR-0023 §7). Rust itself is pinned in rust-toolchain.toml.
+# Pinned developer toolchain (ADR-0023 §7). Rust's version is also pinned in rust-toolchain.toml.
 [tools]
-rust = "1.99.1"
+rust = { version = "1.99.1", components = "rustfmt,clippy", profile = "minimal" }
 node = "26.7.0"
 pnpm = "10.6.5"
 just = "1.59.0"
