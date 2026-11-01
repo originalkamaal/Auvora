@@ -2,7 +2,7 @@
 
 **One identity platform for authentication, authorization, federation, and machine, workload and AI-agent identity.** It ships as a single Rust binary that needs only PostgreSQL to run.
 
-> **Status:** Phase 0 (foundations). There is no usable release yet. See [`docs/roadmap/`](docs/README.md) once it exists, and the phase plan in [`docs/product/plan.md`](docs/product/plan.md) §27.
+> **Status:** Phase 0 (foundations). There is no usable release yet. Progress: [`docs/roadmap/STATUS.md`](docs/roadmap/STATUS.md). Phase plan: [`docs/product/plan.md`](docs/product/plan.md) §27.
 
 ## What Auvora aims to be
 

@@ -9,7 +9,7 @@ This is the map of all documentation in the repository. Placement rules are in [
 | `specs/` | Technical specifications: how a subsystem works | Created in P0 |
 | `threat-models/` | One threat model per feature (STRIDE + LINDDUN, ADR-0049) | Created in P0 |
 | `security/` | Security policies, crypto/PQ guides, review reports | Created in P0 |
-| `roadmap/` | Phase status (`STATUS.md`) and exit-criteria tracking | Created in P0 |
+| [`roadmap/`](roadmap/README.md) | Phase status ([`STATUS.md`](roadmap/STATUS.md)) and exit-criteria tracking | Active |
 | `releases/` | Release notes and phase exit reports | Created at first release |
 | `runbooks/` | Operational runbooks (incident, key compromise, DR) | Created in P1 |
 | `site/` | Public documentation site (Astro Starlight, ADR-0048) | Created in P3 |

@@ -5,6 +5,8 @@ Auvora is an all-in-one IAM platform: authentication, authorization, federation,
 - **Master plan:** `docs/product/plan.md`
 - **Decisions:** `docs/adr/`. The ADRs are authoritative.
 - **Docs map:** `docs/README.md`
+- **Where we are:** `docs/roadmap/STATUS.md` (current phase checklist). Update it in the same commit that completes a deliverable.
+- **Daily commands:** `just setup` once, then `just check` before every commit.
 
 ## Non-negotiable rules (owner directives; apply without being reminded)
 
