@@ -1,0 +1,15 @@
+Auvora Commercial License
+
+Copyright (c) 2026 Kamaal Khan. All rights reserved.
+
+The source code in this directory (ee/) and its subdirectories is NOT
+licensed under the GNU Affero General Public License that covers the rest
+of this repository.
+
+The full terms of the Auvora Commercial License have not yet been
+published. Until they are, no rights to use, copy, modify, merge, publish,
+distribute, sublicense or sell copies of the software in this directory are
+granted, except by separate written agreement with the copyright holder.
+
+See docs/adr/0004-licensing-agpl-apache-commercial-cla.md and
+docs/adr/0062-edition-boundary.md.
