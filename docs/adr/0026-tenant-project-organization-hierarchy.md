@@ -14,7 +14,7 @@ The v0.2 plan used Realm, Tenant and Organization with overlapping meanings. Thi
 
 1. **Hierarchy:**
    - **Installation / Cloud**: the deployment.
-   - **Tenant** (`tnt_`): an Auvora customer account. It owns billing, platform admins (ADR-0055), home region/cell (ADR-0019) and the projects.
+   - **Tenant** (`ten_`): an Auvora customer account. It owns billing, platform admins (ADR-0055), home region/cell (ADR-0019) and the projects.
    - **Project** (`prj_`): exactly one OAuth/OIDC issuer, one user pool, one key set, one configuration. It is the unit of isolation for identity data, RLS (ADR-0017), keys (ADR-0031) and cell placement.
    - **Organization** (`org_`): a B2B customer of the developer, inside a project. Organizations may nest up to **5 levels** (`parent_org_id`). Details are in ADR-0088.
 2. **Environments** are separate projects linked into an **environment group** (`env_group_id`, with a `stage` label: `development | staging | production | custom`). Config promotion happens between linked projects (ADR-0070). Projects with `stage=development` get relaxed rules where documented (e.g. wildcard redirect URIs, ADR-0085), and the UI shows a dev banner.

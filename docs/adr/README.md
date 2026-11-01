@@ -190,3 +190,4 @@ ADR-0001…0060 = Decision Register D01…D60. ADR-0061+ = further decisions fro
 | [0111](0111-repository-organization-and-file-placement.md) | Repository organization and file placement | Accepted |
 | [0112](0112-commit-policy.md) | Commit policy | Accepted |
 | [0113](0113-brand-assets-location.md) | Brand assets location (amends ADR-0111) | Accepted |
+| [0114](0114-cross-adr-consistency-rulings.md) | Cross-ADR consistency rulings (amends ADR-0055, 0063, 0077, 0088) | Accepted |

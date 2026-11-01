@@ -4,7 +4,7 @@
 - **Date:** 2026-11-01
 - **Deciders:** Kamaal Khan (owner)
 - **Plan refs:** plan.md §2.1 (Firebase/Supabase row), §7.2 (Principal kind `anonymous`), §7.3, §8.1
-- **Related:** ADR-0018, ADR-0034, ADR-0054, ADR-0074, ADR-0037, ADR-0026
+- **Related:** ADR-0018, ADR-0034, ADR-0054, ADR-0074, ADR-0037, ADR-0026; amended by ADR-0114
 
 ## Context
 

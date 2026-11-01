@@ -4,7 +4,7 @@
 - **Date:** 2026-11-01
 - **Deciders:** Kamaal Khan (owner)
 - **Plan refs:** plan.md §3.2, §5.3, §27 (P5, P9)
-- **Related:** ADR-0003, ADR-0019, ADR-0057, ADR-0059, ADR-0062
+- **Related:** ADR-0003, ADR-0019, ADR-0057, ADR-0059, ADR-0062; amended by ADR-0114
 
 ## Context
 

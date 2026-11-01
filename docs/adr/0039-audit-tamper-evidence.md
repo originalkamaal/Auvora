@@ -22,7 +22,7 @@ Audit records are evidence for compliance, incident response and Supervised Supp
    - Canonical JSON follows RFC 8785 (JCS).
    - Chains are per project, plus one tenant/platform chain for control-plane events.
 4. **Checkpoints:**
-   - Every 10 min (`audit.checkpoint_interval`), the worker signs `{project_id, seq, hash, time}` with the project's `audit_signing` key (ADR-0082).
+   - Every 10 min (`audit.checkpoint_interval`), the worker signs `{project_id, seq, hash, time}` with the cell-scoped `audit_checkpoint_signing` key (ADR-0082); the checkpoint records the `key_id`.
    - Checkpoints go into `audit_checkpoints` and, when configured, to **WORM object storage** (S3 Object Lock compliance mode, GCS bucket lock, Azure immutable blob; `[audit.worm]`).
    - `auvora audit verify --project <id> [--from --to]` recomputes the chain and validates signatures against checkpoints.
 5. **Event schema:** `id, time, seq, hash, tenant_id, project_id, org_id, category (security|admin|activity|system), action, outcome, reason, actor {type, id, act_chain}, subject {type, id}, client_id, session_id, ip?, user_agent?, geo?, trace_id, request_id, target_before_hash?, target_after_hash?, metadata`.

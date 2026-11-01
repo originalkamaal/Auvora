@@ -57,6 +57,6 @@ None.
 
 ## Verification
 
-- A CI migration lint queries `pg_class` after migrations and fails if any table in `auvora` schemas lacks `relrowsecurity AND relforcerowsecurity`, unless it's on the explicit global-table allowlist (`docs/specs/global-tables.md`).
+- A CI migration lint queries `pg_class` after migrations and fails if any table in `auvora` schemas lacks `relrowsecurity AND relforcerowsecurity`, unless it's on the explicit allowlist (`docs/specs/tenancy-rls.md` §5 for cell-local platform tables; `docs/specs/cells.md` §4.2 for the `auvora_global` directory).
 - A property-based cross-tenant test generates two projects with random data, exercises every repository method under project A, and asserts that no project B row is returned or modified.
 - `PlatformScope` usage is reviewed by CODEOWNERS.

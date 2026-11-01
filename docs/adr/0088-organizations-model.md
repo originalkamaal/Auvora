@@ -4,7 +4,7 @@
 - **Date:** 2026-11-01
 - **Deciders:** Kamaal Khan (owner)
 - **Plan refs:** plan.md §7.1, §7.2 (Organization, Membership, Group, Role), §12.1, §12.4, §27 P4, §2.1 (Clerk/Auth0/Logto/WorkOS orgs)
-- **Related:** ADR-0026, ADR-0027, ADR-0015, ADR-0089, ADR-0055, ADR-0099, ADR-0090, ADR-0029
+- **Related:** ADR-0026, ADR-0027, ADR-0015, ADR-0089, ADR-0055, ADR-0099, ADR-0090, ADR-0029; amended by ADR-0114
 
 ## Context
 
