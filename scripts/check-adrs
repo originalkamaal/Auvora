@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Validates docs/adr against ADR-0000: mandatory headings, valid status,
+# index completeness, and that every ADR-NNNN reference resolves.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)/docs/adr"
+fail=0
+err() { echo "check-adrs: $*" >&2; fail=1; }
+
+headings=("## Context" "## Decision" "## Rationale" "## Alternatives considered" "## Consequences" "## Fallback / revisit trigger" "## Implementation notes" "## Verification")
+
+for f in [0-9][0-9][0-9][0-9]-*.md; do
+  [[ "$f" =~ ^[0-9]{4}-[a-z0-9]+(-[a-z0-9]+)*\.md$ ]] || err "$f: name must be NNNN-kebab-case.md"
+  num="${f%%-*}"
+  head -1 "$f" | grep -q "^# ADR-$num: " || err "$f: first line must be '# ADR-$num: <title>'"
+  for h in "${headings[@]}"; do
+    grep -qx "$h" "$f" || err "$f: missing heading '$h'"
+  done
+  grep -Eq '^- \*\*Status:\*\* (Proposed|Accepted|Deprecated|Superseded by ADR-[0-9]{4})$' "$f" \
+    || err "$f: missing or invalid Status line"
+  if [[ "$f" != 0000-* ]]; then
+    grep -q "($f)" README.md || err "$f: not listed in docs/adr/README.md"
+  fi
+done
+
+# Index links must point at existing files.
+grep -o '([0-9]\{4\}-[a-z0-9-]*\.md)' README.md | tr -d '()' | while read -r f; do
+  [[ -f "$f" ]] || { echo "check-adrs: README links missing file $f" >&2; exit 1; }
+done || fail=1
+
+# Every ADR-NNNN reference in the repository's docs must resolve.
+root="$(git rev-parse --show-toplevel)"
+refs=$(grep -rhoE 'ADR-[0-9]{4}' "$root/docs" "$root/CLAUDE.md" "$root/CONTRIBUTING.md" 2>/dev/null | sort -u || true)
+for r in $refs; do
+  n="${r#ADR-}"
+  compgen -G "${n}-*.md" >/dev/null || err "reference $r does not resolve to a file"
+done
+
+[[ $fail -eq 0 ]] && echo "check-adrs: ok ($(ls [0-9][0-9][0-9][0-9]-*.md | wc -l | tr -d ' ') ADRs)"
+exit $fail

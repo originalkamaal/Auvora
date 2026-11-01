@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Validates every commit message in a range against ADR-0112 (used by CI).
+# Usage: check-commits [<range>]   default: origin/main..HEAD
+set -euo pipefail
+
+range="${1:-origin/main..HEAD}"
+here="$(cd "$(dirname "$0")" && pwd)"
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+fail=0
+
+for sha in $(git rev-list --no-merges "$range"); do
+  git log -1 --format=%B "$sha" > "$tmp"
+  if ! "$here/check-commit-message" "$tmp"; then
+    echo "  ↳ in commit $(git log -1 --format='%h %s' "$sha")" >&2
+    fail=1
+  fi
+done
+
+[[ $fail -eq 0 ]] && echo "check-commits: ok ($range)"
+exit $fail

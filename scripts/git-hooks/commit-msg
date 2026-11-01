@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Git commit-msg hook (installed by `just setup`): enforces ADR-0112.
+exec "$(git rev-parse --show-toplevel)/scripts/check-commit-message" "$1"

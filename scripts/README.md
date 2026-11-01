@@ -10,4 +10,8 @@ Check scripts run locally and in CI (`check-adrs`, `check-repo-layout`, `check-c
 
 | Path | Purpose |
 |---|---|
-| — | Nothing yet. Add a row here in the same commit as each new entry. |
+| [`check-adrs`](check-adrs) | ADR headings, status, index completeness, reference resolution (ADR-0000) |
+| [`check-repo-layout`](check-repo-layout) | Closed top-level set, READMEs, kebab-case docs, docs index, no `.temp/` paths (ADR-0111) |
+| [`check-commit-message`](check-commit-message) | Validates one commit message (ADR-0112) |
+| [`check-commits`](check-commits) | Validates every commit message in a range; used by CI (ADR-0112) |
+| [`git-hooks/`](git-hooks/) | Git hooks installed by `just setup` (`commit-msg`) |

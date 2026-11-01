@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Enforces ADR-0111: closed top-level set, READMEs in content directories,
+# kebab-case docs, complete docs index, and no tracked references to .temp/.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+fail=0
+err() { echo "check-repo-layout: $*" >&2; fail=1; }
+
+allowed_dirs=" apps bench conformance crates deploy docs ee examples fuzz integrations mobile packages scripts sdks tests "
+allowed_files=" README.md LICENSE CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md CLAUDE.md Cargo.toml Cargo.lock pnpm-workspace.yaml package.json pnpm-lock.yaml rust-toolchain.toml justfile "
+
+# Tracked plus new (non-ignored) files.
+files=$(git ls-files --cached --others --exclude-standard)
+
+# 1. Closed top-level set (§1). Dotfiles/dot-directories for tools are allowed.
+for top in $(printf '%s\n' "$files" | cut -d/ -f1 | sort -u); do
+  case "$top" in .*) continue ;; esac
+  if printf '%s\n' "$files" | grep -q "^$top/"; then
+    [[ "$allowed_dirs" == *" $top "* ]] || err "top-level directory '$top/' is not in the ADR-0111 closed set"
+  else
+    [[ "$allowed_files" == *" $top "* ]] || err "root file '$top' is not in the ADR-0111 closed set"
+  fi
+done
+
+# 2. Every top-level directory and every docs/ directory has a README.md (§3.4).
+for d in $(printf '%s\n' "$files" | grep '/' | cut -d/ -f1 | sort -u); do
+  case "$d" in .*) continue ;; esac
+  [[ -f "$d/README.md" ]] || err "$d/ has no README.md"
+done
+for d in $(printf '%s\n' "$files" | grep '^docs/' | xargs -n1 dirname | sort -u); do
+  [[ -f "$d/README.md" ]] || err "$d/ has no README.md"
+done
+
+# 3. docs/ names are kebab-case (§3.1–3.3); READMEs and dated/numbered prefixes are fine.
+for f in $(printf '%s\n' "$files" | grep '^docs/' | grep -v '^docs/site/'); do
+  base="$(basename "$f")"
+  [[ "$base" == README.md || "$base" == _template.md || "$base" == STATUS.md ]] && continue
+  [[ "$base" =~ ^[a-z0-9]+([.-][a-z0-9]+)*\.[a-z0-9]+$ ]] || err "$f: docs file names must be kebab-case"
+done
+
+# 4. docs/README.md lists every docs/ subdirectory (§2).
+for d in $(printf '%s\n' "$files" | grep '^docs/[^/]*/' | cut -d/ -f2 | sort -u); do
+  grep -q "\`$d/\`" docs/README.md || err "docs/$d/ is not listed in docs/README.md"
+done
+
+# 5. Tracked files never reference the .temp/ scratch area (§1).
+#    Mentioning the folder itself (".temp/") is fine; pointing inside it is not.
+hits=$(printf '%s\n' "$files" | while read -r f; do [[ -f "$f" ]] && printf '%s\n' "$f"; done \
+  | xargs grep -l -E '\.temp/[A-Za-z0-9_]' 2>/dev/null || true)
+for h in $hits; do
+  err "$h references a path inside .temp/"
+done
+
+[[ $fail -eq 0 ]] && echo "check-repo-layout: ok"
+exit $fail
