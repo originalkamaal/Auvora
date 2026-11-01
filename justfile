@@ -36,10 +36,11 @@ vet:
 secrets:
     gitleaks git --no-banner --redact .
 
-# Repository and documentation rules (ADR-0000, ADR-0111).
+# Repository, documentation and source rules (ADR-0000, ADR-0111, tenancy-rls.md).
 check-docs:
     scripts/check-adrs
     scripts/check-repo-layout
+    scripts/check-store-rules
 
 # Commit messages since origin/main (ADR-0112).
 check-commits range="origin/main..HEAD":

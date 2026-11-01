@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Enforces source rules from docs/specs/tenancy-rls.md that the compiler can't:
+#   §3.2: tenancy context is only ever set transaction-locally
+#         (no set_config(…, false), no plain SET auvora.*).
+#   §3.3: PlatformScope::acquire is called only from allowlisted modules.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+fail=0
+err() { echo "check-store-rules: $*" >&2; fail=1; }
+
+# Rust and SQL sources that ship or test the server (tracked or new).
+sources=$(git ls-files --cached --others --exclude-standard -- 'crates/*.rs' 'crates/*.sql' 'ee/*.rs' 'ee/*.sql')
+
+# §3.2: session-level context would leak across pooled connections.
+for f in $sources; do
+  if grep -nEi "set_config\([^)]*,[[:space:]]*false[[:space:]]*\)" "$f" >/dev/null; then
+    err "$f: set_config(…, false) is forbidden; use is_local => true (tenancy-rls.md §3.2)"
+  fi
+  if grep -nEi "(^|[^_[:alnum:]])SET[[:space:]]+(SESSION[[:space:]]+)?auvora\." "$f" >/dev/null; then
+    err "$f: SET auvora.* is forbidden; Store::begin sets context with set_config(…, true)"
+  fi
+done
+
+# §3.3: platform scope acquisition sites. Extend this list only with CODEOWNERS review.
+allowed_acquire=(
+  "crates/auvora-store/src/platform.rs"
+  "crates/auvora-store/tests/"
+)
+for f in $(grep -l "PlatformScope::acquire" $sources 2>/dev/null || true); do
+  ok=0
+  for allowed in "${allowed_acquire[@]}"; do
+    [[ "$f" == "$allowed"* ]] && ok=1
+  done
+  [[ $ok -eq 1 ]] || err "$f: PlatformScope::acquire outside the allowlist (tenancy-rls.md §3.3)"
+done
+
+[[ $fail -eq 0 ]] && echo "check-store-rules: ok"
+exit $fail

@@ -12,6 +12,7 @@ Check scripts run locally and in CI (`check-adrs`, `check-repo-layout`, `check-c
 |---|---|
 | [`check-adrs`](check-adrs) | ADR headings, status, index completeness, reference resolution (ADR-0000) |
 | [`check-repo-layout`](check-repo-layout) | Closed top-level set, READMEs, kebab-case docs, docs index, no `.temp/` paths (ADR-0111) |
+| [`check-store-rules`](check-store-rules) | Bans session-level tenancy context; restricts `PlatformScope::acquire` call sites (tenancy-rls.md §3) |
 | [`check-commit-message`](check-commit-message) | Validates one commit message (ADR-0112) |
 | [`check-commits`](check-commits) | Validates every commit message in a range; used by CI (ADR-0112) |
 | [`git-hooks/`](git-hooks/) | Git hooks installed by `just setup` (`commit-msg`) |
