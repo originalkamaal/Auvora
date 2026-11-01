@@ -57,11 +57,11 @@ criteria = "safe-to-deploy"
 
 [[exemptions.aws-lc-rs]]
 version = "1.19.0"
-criteria = "safe-to-run"
+criteria = "safe-to-deploy"
 
 [[exemptions.aws-lc-sys]]
 version = "0.47.0"
-criteria = "safe-to-run"
+criteria = "safe-to-deploy"
 
 [[exemptions.axum]]
 version = "0.8.9"
@@ -113,7 +113,7 @@ criteria = "safe-to-deploy"
 
 [[exemptions.cc]]
 version = "1.10.0"
-criteria = "safe-to-run"
+criteria = "safe-to-deploy"
 
 [[exemptions.cfg-if]]
 version = "1.0.5"
@@ -125,7 +125,7 @@ criteria = "safe-to-run"
 
 [[exemptions.cmake]]
 version = "0.1.58"
-criteria = "safe-to-run"
+criteria = "safe-to-deploy"
 
 [[exemptions.cmov]]
 version = "0.5.4"
@@ -241,7 +241,7 @@ criteria = "safe-to-run"
 
 [[exemptions.find-msvc-tools]]
 version = "0.1.0"
-criteria = "safe-to-run"
+criteria = "safe-to-deploy"
 
 [[exemptions.flume]]
 version = "0.12.0"
@@ -249,7 +249,7 @@ criteria = "safe-to-deploy"
 
 [[exemptions.fs_extra]]
 version = "1.3.0"
-criteria = "safe-to-run"
+criteria = "safe-to-deploy"
 
 [[exemptions.futures]]
 version = "0.3.34"
@@ -437,7 +437,7 @@ criteria = "safe-to-run"
 
 [[exemptions.jobserver]]
 version = "0.1.35"
-criteria = "safe-to-run"
+criteria = "safe-to-deploy"
 
 [[exemptions.js-sys]]
 version = "0.3.107"
@@ -581,10 +581,6 @@ criteria = "safe-to-run"
 
 [[exemptions.r-efi]]
 version = "5.2.0"
-criteria = "safe-to-run"
-
-[[exemptions.r-efi]]
-version = "6.0.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.rand]]

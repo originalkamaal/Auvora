@@ -17,6 +17,7 @@ mod error;
 mod scope;
 mod store;
 
+pub mod platform;
 pub mod repo;
 
 pub use error::StoreError;

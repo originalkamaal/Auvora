@@ -5,7 +5,12 @@
 //! `async fn` here is exercised by the isolation property tests; the coverage
 //! gate in `tests/rls_isolation.rs` scans these sources and fails if one isn't.
 
+pub mod audit;
+pub mod environment_groups;
 pub mod identifiers;
+pub mod jobs;
+pub mod outbox;
 pub mod principals;
 pub mod projects;
 pub mod tenants;
+pub mod users;

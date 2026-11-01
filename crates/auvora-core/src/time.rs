@@ -17,6 +17,14 @@ pub trait Clock: Send + Sync {
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
     }
+
+    /// Microseconds since the Unix epoch (PostgreSQL `timestamptz` precision),
+    /// saturating at 0 for pre-epoch clocks.
+    fn unix_micros(&self) -> i64 {
+        self.now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| i64::try_from(d.as_micros()).unwrap_or(i64::MAX))
+    }
 }
 
 /// The real system clock. This is the only place allowed to read wall-clock time.
@@ -56,6 +64,7 @@ mod tests {
     fn fixed_clock_reports_its_instant() {
         let clock = FixedClock::at_unix_millis(1_762_000_000_123);
         assert_eq!(clock.unix_millis(), 1_762_000_000_123);
+        assert_eq!(clock.unix_micros(), 1_762_000_000_123_000);
     }
 
     #[test]

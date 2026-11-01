@@ -25,6 +25,10 @@ pub enum StoreError {
     #[error("operation requires a project scope")]
     ProjectScopeRequired,
 
+    /// The input can't be stored (e.g. a float in an audit body).
+    #[error("invalid input: {0}")]
+    Invalid(&'static str),
+
     /// Any other database error.
     #[error("database error: {0}")]
     Database(#[source] sqlx::Error),

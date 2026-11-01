@@ -23,7 +23,7 @@ Update this file in the same commit that completes a deliverable. Link evidence 
 | 11 | Tenancy/RLS design spec, incl. isolation property tests plan (ADR-0017) | Done (Draft) | [`docs/specs/tenancy-rls.md`](../specs/tenancy-rls.md) |
 | 12 | Cell-ready routing design (ADR-0019) | Done (Draft) | [`docs/specs/cells.md`](../specs/cells.md) |
 | 13 | Threat-model template + platform threat model; data classification and PII tagging scheme (ADR-0049, ADR-0072) | Done (Draft) | [`docs/threat-models/`](../threat-models/README.md), [`docs/security/data-classification.md`](../security/data-classification.md) |
-| 14 | `auvora-store` skeleton with RLS harness (Testcontainers) | Partial: roles, RLS helper, tenants/projects/principals/identifiers, P1–P7 and P9–P11 passing. Remaining: users, environment_groups, audit_events, outbox_events, jobs, `PlatformScope` + P8 | [`crates/auvora-store`](../../crates/auvora-store/README.md) |
+| 14 | `auvora-store` skeleton with RLS harness (Testcontainers) | Done | [`crates/auvora-store`](../../crates/auvora-store/README.md): full P0 schema; properties P1–P11, audit-chain and boot-check tests; `scripts/check-store-rules` |
 | 15 | `auvora-crypto` (KeyProvider: local + AWS KMS) and `auvora-jose` skeletons with fuzz targets | Todo | |
 | 16 | Conformance harness (OIDF suite container) and bench harness | Todo | |
 | 17 | Spikes with go/no-go reports: samael interop (5 IdPs), webauthn-rs, CEL hardening, wasmtime limits, Cedar entity loading | Todo | |
@@ -33,4 +33,4 @@ Update this file in the same commit that completes a deliverable. Link evidence 
 
 - [ ] All ADRs merged (done) and the spikes are go, or a fallback was triggered and documented
 - [ ] CI green with fuzzing, cargo-deny and SBOM
-- [ ] RLS isolation property tests pass
+- [x] RLS isolation property tests pass (P1–P11 in `crates/auvora-store/tests/rls_isolation.rs`, mutation-checked)

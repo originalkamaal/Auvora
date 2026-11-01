@@ -5,7 +5,7 @@
 //! test builds its own tenants and projects with fresh IDs, so tests can run
 //! in parallel without seeing each other's data as "foreign" by accident.
 //!
-//! Property P8 (platform scope audit) arrives with `PlatformScope`.
+//! P8 (platform scope audit) and the audit chain are covered at the end.
 
 // Test harness: failing fast with a message is the desired behaviour here
 // (ADR-0047 allows unwrap/expect/panic in tests; helpers aren't `#[test]` fns).
@@ -15,12 +15,15 @@ use std::collections::{BTreeSet, HashSet};
 use std::sync::{Mutex, OnceLock};
 
 use auvora_core::id::{Id, Kind};
-use auvora_core::time::SystemClock;
+use auvora_core::time::{Clock, SystemClock};
+use auvora_store::platform::{self, ActorRef, PlatformReason, PlatformScope, PlatformStore};
+use auvora_store::repo::audit::{self, ChainError, NewAuditEvent};
 use auvora_store::repo::identifiers::{self, NewIdentifier};
 use auvora_store::repo::principals::{self, PrincipalKind};
-use auvora_store::repo::{projects, tenants};
-use auvora_store::{BOOTSTRAP_SQL, MIGRATOR, Store, StoreError, TenantScope};
+use auvora_store::repo::{environment_groups, jobs, outbox, projects, tenants, users};
+use auvora_store::{BOOTSTRAP_SQL, MIGRATOR, Store, StoreError, TenantScope, TenantTx};
 use proptest::prelude::*;
+use serde_json::json;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::{AssertSqlSafe, Row};
 use testcontainers_modules::postgres::Postgres;
@@ -30,9 +33,9 @@ use uuid::Uuid;
 
 const PASSWORD: &str = "test-only-password";
 /// Tables outside tenant RLS (cell-local platform allowlist, tenancy-rls.md §5).
-const PLATFORM_TABLES: &[&str] = &["_sqlx_migrations"];
+const PLATFORM_TABLES: &[&str] = &["_sqlx_migrations", "platform_audit_events"];
 /// `SECURITY DEFINER` functions allowed in schema `auvora` (tenancy-rls.md §5).
-const DEFINER_FUNCTIONS: &[&str] = &[];
+const DEFINER_FUNCTIONS: &[&str] = &["create_partitions"];
 
 // ---------------------------------------------------------------- fixture
 
@@ -202,6 +205,9 @@ async fn build_world(store: &Store, specs: [&ProjectSpec; 3]) -> World {
         tenants::create(&mut tx, &tenant.to_string(), "tenant")
             .await
             .unwrap();
+        environment_groups::create(&mut tx, new_id(Kind::EnvironmentLink), "product")
+            .await
+            .unwrap();
         for project in projects {
             // Same slug in every tenant on purpose (uniqueness is per tenant).
             let slug = if project == a2 { "second" } else { "main" };
@@ -236,7 +242,34 @@ async fn build_world(store: &Store, specs: [&ProjectSpec; 3]) -> World {
                 .unwrap();
             ids.push(p.id.uuid());
             world.principals.push((project, p.id.uuid()));
+            if *kind == PrincipalKind::User {
+                users::create(&mut tx, p.id.uuid()).await.unwrap();
+            }
+            // ADR-0039/0008: audit and outbox rows commit with the change.
+            let event = NewAuditEvent {
+                category: "admin",
+                action: "principal.created",
+                outcome: "success",
+                actor: json!({"type": "system", "id": "test"}),
+                subject: json!({"type": "principal", "id": p.id.to_string()}),
+                metadata: json!({}),
+            };
+            audit::append(&mut tx, &event, &SystemClock).await.unwrap();
+            outbox::enqueue(
+                &mut tx,
+                "auvora.principal.created.v1",
+                &p.id.to_string(),
+                &json!({}),
+                &SystemClock,
+            )
+            .await
+            .unwrap();
         }
+        // Jobs scheduled an hour ahead, so only P8's own job is ever due.
+        let run_at = SystemClock.unix_micros() + 3_600_000_000;
+        jobs::enqueue(&mut tx, new_id(Kind::Job), "test.noop", &json!({}), run_at)
+            .await
+            .unwrap();
         let mut seen = HashSet::new();
         for (i, value) in spec.values.iter().enumerate() {
             if !seen.insert(*value) {
@@ -266,7 +299,11 @@ async fn project_checksum(platform: &PgPool, project: Id) -> String {
     sqlx::query_scalar(
         "SELECT coalesce(string_agg(h, ',' ORDER BY h), '') FROM ( \
            SELECT md5(p::text) AS h FROM auvora.principals p WHERE project_id = $1 \
-           UNION ALL SELECT md5(i::text) FROM auvora.identifiers i WHERE project_id = $1) x",
+           UNION ALL SELECT md5(i::text) FROM auvora.identifiers i WHERE project_id = $1 \
+           UNION ALL SELECT md5(u::text) FROM auvora.users u WHERE project_id = $1 \
+           UNION ALL SELECT md5(a::text) FROM auvora.audit_events a WHERE project_id = $1 \
+           UNION ALL SELECT md5(o::text) FROM auvora.outbox_events o WHERE project_id = $1 \
+           UNION ALL SELECT md5(j::text) FROM auvora.jobs j WHERE project_id = $1) x",
     )
     .bind(project.uuid())
     .fetch_one(platform)
@@ -314,10 +351,18 @@ fn hit(method: &'static str) {
 /// Every `pub async fn` in `src/repo/*.rs`, found by scanning the sources.
 fn repository_methods() -> BTreeSet<String> {
     let sources = [
-        ("tenants", include_str!("../src/repo/tenants.rs")),
-        ("projects", include_str!("../src/repo/projects.rs")),
-        ("principals", include_str!("../src/repo/principals.rs")),
+        ("audit", include_str!("../src/repo/audit.rs")),
+        (
+            "environment_groups",
+            include_str!("../src/repo/environment_groups.rs"),
+        ),
         ("identifiers", include_str!("../src/repo/identifiers.rs")),
+        ("jobs", include_str!("../src/repo/jobs.rs")),
+        ("outbox", include_str!("../src/repo/outbox.rs")),
+        ("principals", include_str!("../src/repo/principals.rs")),
+        ("projects", include_str!("../src/repo/projects.rs")),
+        ("tenants", include_str!("../src/repo/tenants.rs")),
+        ("users", include_str!("../src/repo/users.rs")),
     ];
     let mut methods = BTreeSet::new();
     for (module, source) in sources {
@@ -344,10 +389,15 @@ fn repository_sources_list_matches_repo_modules() {
     assert_eq!(
         on_disk,
         [
+            "audit.rs",
+            "environment_groups.rs",
             "identifiers.rs",
+            "jobs.rs",
+            "outbox.rs",
             "principals.rs",
             "projects.rs",
-            "tenants.rs"
+            "tenants.rs",
+            "users.rs"
         ]
     );
 }
@@ -364,70 +414,7 @@ fn p1_p2_read_and_write_isolation_cover_every_repository_method() {
     let config = ProptestConfig::default();
 
     proptest!(config, |(s1 in project_spec(), s2 in project_spec(), s3 in project_spec())| {
-        rt.block_on(async {
-            let w = build_world(&store, [&s1, &s2, &s3]).await;
-            hit("tenants::create"); hit("projects::create"); hit("principals::create"); hit("identifiers::create");
-            let before = project_checksum(&platform, w.b1).await;
-            let mut tx = store.begin(&w.scope(w.a1)).await.unwrap();
-
-            // P1: reads.
-            assert_eq!(tenants::get(&mut tx).await.unwrap().id, w.a);
-            hit("tenants::get");
-            let visible: Vec<Id> = projects::list(&mut tx).await.unwrap().into_iter().map(|p| p.id).collect();
-            assert_eq!(visible.iter().copied().collect::<HashSet<_>>(), HashSet::from([w.a1, w.a2]));
-            hit("projects::list");
-            assert!(matches!(projects::get(&mut tx, w.b1).await, Err(StoreError::NotFound)));
-            assert_eq!(projects::get(&mut tx, w.a2).await.unwrap().id, w.a2);
-            hit("projects::get");
-
-            let listed = principals::list(&mut tx).await.unwrap();
-            assert!(listed.iter().all(|p| p.project_id == w.a1));
-            assert_eq!(listed.len(), w.principals_in(w.a1).len());
-            hit("principals::list");
-            for id in w.principals_in(w.b1).into_iter().chain(w.principals_in(w.a2)) {
-                assert!(matches!(principals::get(&mut tx, id).await, Err(StoreError::NotFound)));
-                assert_eq!(identifiers::list_for_principal(&mut tx, id).await.unwrap(), Vec::new());
-            }
-            for id in w.principals_in(w.a1) {
-                assert_eq!(principals::get(&mut tx, id).await.unwrap().project_id, w.a1);
-            }
-            hit("principals::get");
-            hit("identifiers::list_for_principal");
-            let a1_values: HashSet<Vec<u8>> = w.identifiers_in(w.a1).into_iter().map(|(.., b)| b).collect();
-            for (_, _, bidx) in w.identifiers_in(w.b1) {
-                match identifiers::find_by_value(&mut tx, "email", &bidx).await {
-                    Ok(found) => {
-                        assert_eq!(found.project_id, w.a1);
-                        assert!(a1_values.contains(&bidx));
-                    }
-                    Err(StoreError::NotFound) => assert!(!a1_values.contains(&bidx)),
-                    Err(e) => panic!("unexpected error: {e}"),
-                }
-            }
-            hit("identifiers::find_by_value");
-
-            // P2: writes aimed at B1 rows affect nothing.
-            for id in w.principals_in(w.b1) {
-                assert!(matches!(principals::set_status(&mut tx, id, "suspended").await, Err(StoreError::NotFound)));
-                assert!(matches!(principals::delete(&mut tx, id).await, Err(StoreError::NotFound)));
-            }
-            for (id, ..) in w.identifiers_in(w.b1) {
-                assert!(matches!(identifiers::delete(&mut tx, id).await, Err(StoreError::NotFound)));
-            }
-            // …while the same operations on A1's own rows work.
-            let own = w.principals_in(w.a1);
-            principals::set_status(&mut tx, own[0], "suspended").await.unwrap();
-            hit("principals::set_status");
-            if let Some((id, ..)) = w.identifiers_in(w.a1).first() {
-                identifiers::delete(&mut tx, *id).await.unwrap();
-                hit("identifiers::delete");
-            }
-            principals::delete(&mut tx, *own.last().unwrap()).await.unwrap();
-            hit("principals::delete");
-            tx.commit().await.unwrap();
-
-            assert_eq!(project_checksum(&platform, w.b1).await, before, "B1 changed");
-        });
+        rt.block_on(check_isolation_case(&store, &platform, [&s1, &s2, &s3]));
     });
 
     let exercised: BTreeSet<String> = EXERCISED
@@ -446,6 +433,175 @@ fn p1_p2_read_and_write_isolation_cover_every_repository_method() {
     );
 }
 
+/// One P1/P2 case: build a random world, then check reads and writes under scope A1.
+async fn check_isolation_case(store: &Store, platform: &PgPool, specs: [&ProjectSpec; 3]) {
+    let w = build_world(store, specs).await;
+    hit("tenants::create");
+    hit("projects::create");
+    hit("principals::create");
+    hit("identifiers::create");
+    let before = project_checksum(platform, w.b1).await;
+    let mut tx = store.begin(&w.scope(w.a1)).await.unwrap();
+
+    check_reads(&mut tx, &w, platform).await;
+    check_writes(&mut tx, &w).await;
+    tx.commit().await.unwrap();
+
+    assert_eq!(project_checksum(platform, w.b1).await, before, "B1 changed");
+}
+
+/// P1: under scope A1, every repository read sees only A1 (or tenant A) rows.
+async fn check_reads(tx: &mut TenantTx, w: &World, platform: &PgPool) {
+    assert_eq!(tenants::get(tx).await.unwrap().id, w.a);
+    hit("tenants::get");
+    let visible: Vec<Id> = projects::list(tx)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.id)
+        .collect();
+    assert_eq!(
+        visible.iter().copied().collect::<HashSet<_>>(),
+        HashSet::from([w.a1, w.a2])
+    );
+    hit("projects::list");
+    assert!(matches!(
+        projects::get(tx, w.b1).await,
+        Err(StoreError::NotFound)
+    ));
+    assert_eq!(projects::get(tx, w.a2).await.unwrap().id, w.a2);
+    hit("projects::get");
+
+    let listed = principals::list(tx).await.unwrap();
+    assert!(listed.iter().all(|p| p.project_id == w.a1));
+    assert_eq!(listed.len(), w.principals_in(w.a1).len());
+    hit("principals::list");
+    for id in w
+        .principals_in(w.b1)
+        .into_iter()
+        .chain(w.principals_in(w.a2))
+    {
+        assert!(matches!(
+            principals::get(tx, id).await,
+            Err(StoreError::NotFound)
+        ));
+        assert_eq!(
+            identifiers::list_for_principal(tx, id).await.unwrap(),
+            Vec::new()
+        );
+    }
+    for id in w.principals_in(w.a1) {
+        assert_eq!(principals::get(tx, id).await.unwrap().project_id, w.a1);
+    }
+    hit("principals::get");
+    hit("identifiers::list_for_principal");
+    let a1_values: HashSet<Vec<u8>> = w
+        .identifiers_in(w.a1)
+        .into_iter()
+        .map(|(.., b)| b)
+        .collect();
+    for (_, _, bidx) in w.identifiers_in(w.b1) {
+        match identifiers::find_by_value(tx, "email", &bidx).await {
+            Ok(found) => {
+                assert_eq!(found.project_id, w.a1);
+                assert!(a1_values.contains(&bidx));
+            }
+            Err(StoreError::NotFound) => assert!(!a1_values.contains(&bidx)),
+            Err(e) => panic!("unexpected error: {e}"),
+        }
+    }
+    hit("identifiers::find_by_value");
+
+    let groups = environment_groups::list(tx).await.unwrap();
+    assert!(groups.len() == 1 && groups.iter().all(|g| g.tenant_id == w.a.uuid()));
+    hit("environment_groups::create");
+    hit("environment_groups::list");
+    for id in w.principals_in(w.b1) {
+        assert!(matches!(
+            users::get(tx, id).await,
+            Err(StoreError::NotFound)
+        ));
+    }
+    hit("users::create");
+    hit("users::get");
+    let chain = audit::list(tx, 1, 1_000).await.unwrap();
+    assert!(chain.iter().all(|e| e.project_id == w.a1));
+    assert_eq!(chain.len(), w.principals_in(w.a1).len());
+    audit::verify_chain(&chain).unwrap();
+    hit("audit::append");
+    hit("audit::list");
+    let pending = outbox::list_undelivered(tx, 1_000).await.unwrap();
+    assert!(pending.iter().all(|e| e.project_id == w.a1.uuid()));
+    assert_eq!(pending.len(), w.principals_in(w.a1).len());
+    hit("outbox::enqueue");
+    hit("outbox::list_undelivered");
+    let foreign_jobs: Vec<Uuid> =
+        sqlx::query_scalar("SELECT id FROM auvora.jobs WHERE project_id = $1")
+            .bind(w.b1.uuid())
+            .fetch_all(platform)
+            .await
+            .unwrap();
+    for id in foreign_jobs {
+        assert!(matches!(jobs::get(tx, id).await, Err(StoreError::NotFound)));
+    }
+    hit("jobs::enqueue");
+    hit("jobs::get");
+}
+
+/// P2: writes aimed at B1 rows affect nothing, while the same writes on A1 work.
+async fn check_writes(tx: &mut TenantTx, w: &World) {
+    for id in w.principals_in(w.b1) {
+        assert!(matches!(
+            principals::set_status(tx, id, "suspended").await,
+            Err(StoreError::NotFound)
+        ));
+        assert!(matches!(
+            principals::delete(tx, id).await,
+            Err(StoreError::NotFound)
+        ));
+    }
+    for (id, ..) in w.identifiers_in(w.b1) {
+        assert!(matches!(
+            identifiers::delete(tx, id).await,
+            Err(StoreError::NotFound)
+        ));
+    }
+    for id in w.principals_in(w.b1) {
+        let result = users::set_public_metadata(tx, id, &json!({"x": 1})).await;
+        assert!(matches!(result, Err(StoreError::NotFound)));
+    }
+    if let Some(user) = principals::list(tx)
+        .await
+        .unwrap()
+        .iter()
+        .find(|p| p.kind == PrincipalKind::User)
+    {
+        users::set_public_metadata(tx, user.id.uuid(), &json!({"plan": "pro"}))
+            .await
+            .unwrap();
+        assert_eq!(
+            users::get(tx, user.id.uuid())
+                .await
+                .unwrap()
+                .public_metadata,
+            json!({"plan": "pro"})
+        );
+        hit("users::set_public_metadata");
+    }
+    // …while the same operations on A1's own rows work.
+    let own = w.principals_in(w.a1);
+    principals::set_status(tx, own[0], "suspended")
+        .await
+        .unwrap();
+    hit("principals::set_status");
+    if let Some((id, ..)) = w.identifiers_in(w.a1).first() {
+        identifiers::delete(tx, *id).await.unwrap();
+        hit("identifiers::delete");
+    }
+    principals::delete(tx, *own.last().unwrap()).await.unwrap();
+    hit("principals::delete");
+}
+
 /// P3: a raw INSERT carrying another scope's tenancy keys fails `WITH CHECK`, for every table.
 #[test]
 fn p3_insert_with_foreign_keys_is_rejected_for_every_table() {
@@ -459,18 +615,27 @@ fn p3_insert_with_foreign_keys_is_rejected_for_every_table() {
         for (table, level) in tenant_tables(&platform).await {
             let mut tx = app.begin().await.unwrap();
             set_scope(&mut tx, Some(w.a), Some(w.a1)).await;
-            let override_json = if table == "tenants" {
-                format!(r#"{{"id": "{}"}}"#, w.b.uuid())
-            } else if level == "tenant" {
-                format!(r#"{{"id": "{}", "tenant_id": "{}"}}"#, Uuid::now_v7_for_tests(), w.b.uuid())
+            let has_id: bool = sqlx::query_scalar(
+                "SELECT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = ('auvora.' || $1)::regclass \
+                 AND attname = 'id' AND NOT attisdropped)",
+            )
+            .bind(&table)
+            .fetch_one(&platform)
+            .await
+            .unwrap();
+            let mut overrides = serde_json::Map::new();
+            if table == "tenants" {
+                overrides.insert("id".into(), json!(w.b.uuid().to_string()));
             } else {
-                format!(
-                    r#"{{"id": "{}", "tenant_id": "{}", "project_id": "{}"}}"#,
-                    Uuid::now_v7_for_tests(),
-                    w.b.uuid(),
-                    w.b1.uuid()
-                )
-            };
+                if has_id {
+                    overrides.insert("id".into(), json!(Uuid::now_v7_for_tests().to_string()));
+                }
+                overrides.insert("tenant_id".into(), json!(w.b.uuid().to_string()));
+                if level == "project" {
+                    overrides.insert("project_id".into(), json!(w.b1.uuid().to_string()));
+                }
+            }
+            let override_json = serde_json::Value::Object(overrides).to_string();
             let columns: Vec<String> = sqlx::query_scalar(
                 "SELECT quote_ident(attname) FROM pg_attribute WHERE attrelid = ('auvora.' || $1)::regclass \
                  AND attnum > 0 AND NOT attisdropped AND attgenerated = '' ORDER BY attnum",
@@ -565,11 +730,29 @@ fn p5_catalog_sweep_matches_ground_truth() {
             .fetch_one(&mut *tx)
             .await
             .unwrap();
-            let touched = sqlx::query(AssertSqlSafe(format!("UPDATE auvora.{table} SET id = id")))
-                .execute(&mut *tx)
+            // A no-op UPDATE on the first writable column; append-only tables refuse UPDATE.
+            let column: String = sqlx::query_scalar(
+                "SELECT quote_ident(attname) FROM pg_attribute WHERE attrelid = ('auvora.' || $1)::regclass \
+                 AND attnum > 0 AND NOT attisdropped AND attgenerated = '' ORDER BY attnum LIMIT 1",
+            )
+            .bind(&table)
+            .fetch_one(&mut *tx)
+            .await
+            .unwrap();
+            let can_update: bool = sqlx::query_scalar("SELECT has_table_privilege('auvora.' || $1, 'UPDATE')")
+                .bind(&table)
+                .fetch_one(&mut *tx)
                 .await
-                .unwrap()
-                .rows_affected();
+                .unwrap();
+            let touched = if can_update {
+                sqlx::query(AssertSqlSafe(format!("UPDATE auvora.{table} SET {column} = {column}")))
+                    .execute(&mut *tx)
+                    .await
+                    .unwrap()
+                    .rows_affected()
+            } else {
+                u64::try_from(truth).unwrap()
+            };
             tx.rollback().await.unwrap();
 
             assert!(truth > 0, "{table}: fixture produced no A1 rows");
@@ -884,6 +1067,17 @@ fn p11_catalog_lint() {
             }
         }
 
+        // L7 (partitions): direct partition access would bypass the parent's RLS.
+        let open_partitions: Vec<String> = sqlx::query_scalar(
+            "SELECT c.relname::text FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace \
+             WHERE n.nspname = 'auvora' AND c.relispartition \
+               AND has_table_privilege('auvora_app', c.oid, 'SELECT,INSERT,UPDATE,DELETE')",
+        )
+        .fetch_all(&platform)
+        .await
+        .unwrap();
+        problems.extend(open_partitions.into_iter().map(|t| format!("L7 {t}: auvora_app can access a partition")));
+
         assert!(problems.is_empty(), "catalog lint failed:\n{}", problems.join("\n"));
     });
 }
@@ -902,6 +1096,157 @@ fn store_refuses_roles_that_can_bypass_rls() {
             );
         }
         assert!(Store::connect(&fx.url("auvora_app"), 1).await.is_ok());
+    });
+}
+
+/// P8: every `PlatformScope::acquire` writes exactly one platform audit row,
+/// and platform scope can claim jobs across projects.
+#[test]
+fn p8_platform_scope_is_audited_and_claims_across_projects() {
+    let rt = runtime();
+    rt.block_on(async {
+        let store = store().await;
+        let platform = platform_pool().await;
+        let platform_store = PlatformStore::connect(&fixture().url("auvora_platform"), 2)
+            .await
+            .unwrap();
+        let spec = ProjectSpec {
+            kinds: vec![PrincipalKind::User],
+            values: vec![],
+        };
+        let w = build_world(&store, [&spec, &spec, &spec]).await;
+
+        // A job that is already due, in project B1.
+        let due = new_id(Kind::Job);
+        let mut tx = store.begin(&w.scope(w.b1)).await.unwrap();
+        jobs::enqueue(&mut tx, due, "test.due", &json!({}), 1_000_000)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+
+        let ticket = format!("TICKET-{}", new_id(Kind::Event));
+        let count = |ticket: String| {
+            let platform = platform.clone();
+            async move {
+                sqlx::query_scalar::<_, i64>(
+                    "SELECT count(*) FROM auvora.platform_audit_events WHERE detail = $1",
+                )
+                .bind(ticket)
+                .fetch_one(&platform)
+                .await
+                .unwrap()
+            }
+        };
+        assert_eq!(count(ticket.clone()).await, 0);
+
+        let actor = ActorRef {
+            kind: "worker",
+            id: "test-worker".into(),
+        };
+        let mut ptx = PlatformScope::acquire(
+            PlatformReason::PlatformAdminRead {
+                ticket: ticket.clone(),
+            },
+            actor,
+            &platform_store,
+            &SystemClock,
+        )
+        .await
+        .unwrap();
+        let claimed = platform::claim_jobs(&mut ptx, "test-worker", 10, 60_000_000, &SystemClock)
+            .await
+            .unwrap();
+        ptx.commit().await.unwrap();
+
+        assert_eq!(
+            count(ticket).await,
+            1,
+            "acquire must write exactly one platform audit row"
+        );
+        assert!(
+            claimed
+                .iter()
+                .any(|j| j.id == due.uuid() && j.project_id == w.b1.uuid())
+        );
+        let state: String = sqlx::query_scalar("SELECT state FROM auvora.jobs WHERE id = $1")
+            .bind(due.uuid())
+            .fetch_one(&platform)
+            .await
+            .unwrap();
+        assert_eq!(state, "running");
+
+        // The app role can't read the platform chain at all.
+        let app = raw_app_pool(1).await;
+        let denied =
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM auvora.platform_audit_events")
+                .fetch_one(&app)
+                .await;
+        assert!(denied.is_err(), "auvora_app read the platform audit chain");
+    });
+}
+
+/// ADR-0039: the audit chain is gapless and verifiable, tampering is detected,
+/// and stored events can't be changed by any role.
+#[test]
+fn audit_chain_is_verifiable_and_append_only() {
+    let rt = runtime();
+    rt.block_on(async {
+        let store = store().await;
+        let spec = ProjectSpec {
+            kinds: vec![PrincipalKind::User; 5],
+            values: vec![],
+        };
+        let w = build_world(&store, [&spec, &spec, &spec]).await;
+
+        let mut tx = store.begin(&w.scope(w.a1)).await.unwrap();
+        let chain = audit::list(&mut tx, 1, 100).await.unwrap();
+        tx.rollback().await.unwrap();
+        assert_eq!(
+            chain.iter().map(|e| e.seq).collect::<Vec<_>>(),
+            vec![1, 2, 3, 4, 5]
+        );
+        audit::verify_chain(&chain).unwrap();
+
+        let mut tampered = chain.clone();
+        tampered[2].action = "principal.deleted".into();
+        assert_eq!(
+            audit::verify_chain(&tampered),
+            Err(ChainError::HashMismatch(3))
+        );
+        let mut gapped = chain.clone();
+        gapped.remove(1);
+        assert_eq!(audit::verify_chain(&gapped), Err(ChainError::Gap(2)));
+
+        // Floats can't be canonicalized, so they are refused before storage.
+        let mut tx = store.begin(&w.scope(w.a1)).await.unwrap();
+        let float_event = NewAuditEvent {
+            category: "system",
+            action: "x",
+            outcome: "success",
+            actor: json!({}),
+            subject: json!({}),
+            metadata: json!({"ratio": 0.5}),
+        };
+        assert!(matches!(
+            audit::append(&mut tx, &float_event, &SystemClock).await,
+            Err(StoreError::Invalid(_))
+        ));
+        tx.rollback().await.unwrap();
+
+        // Append-only: app (no privilege), platform (no privilege) and owner (trigger) all fail.
+        for role in ["auvora_app", "auvora_platform", "auvora_owner"] {
+            let pool = PgPool::connect(&fixture().url(role)).await.unwrap();
+            for sql in [
+                "UPDATE auvora.audit_events SET action = 'tampered' WHERE project_id = $1",
+                "DELETE FROM auvora.audit_events WHERE project_id = $1",
+            ] {
+                let mut tx = pool.begin().await.unwrap();
+                set_scope(&mut tx, Some(w.a), Some(w.a1)).await;
+                let result = sqlx::query(sql).bind(w.a1.uuid()).execute(&mut *tx).await;
+                assert!(result.is_err(), "{role} could run: {sql}");
+                tx.rollback().await.unwrap();
+            }
+        }
     });
 }
 

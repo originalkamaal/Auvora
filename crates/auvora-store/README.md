@@ -8,8 +8,9 @@ PostgreSQL persistence with tenant isolation enforced by row-level security. Des
 | `migrations/` | sqlx migrations, run as `auvora_owner` only (expand/contract, ADR-0025) |
 | `src/store.rs` | `Store` (runtime `auvora_app` pool + boot safety check) and `TenantTx` |
 | `src/scope.rs` | `TenantScope`: the tenant/project a transaction acts for |
-| `src/repo/` | Repositories; each takes `&mut TenantTx` and never sees the pool |
-| `tests/rls_isolation.rs` | Isolation property tests P1–P7, P9–P11 against PostgreSQL 16 (needs Docker) |
+| `src/repo/` | Repositories; each takes `&mut TenantTx` and never sees the pool. `audit` keeps the per-project SHA-256 hash chain (ADR-0039) |
+| `src/platform.rs` | `PlatformScope`: the only RLS-bypassing access; every acquisition is recorded in `platform_audit_events` |
+| `tests/rls_isolation.rs` | Isolation properties P1–P11, audit-chain and boot-check tests against PostgreSQL 16 (needs Docker) |
 
 **Rules:**
 - Every new table calls `auvora.enable_tenant_rls(...)` in its migration and tags every column with `pii=…`.
