@@ -451,7 +451,7 @@ There are two classes. Neither has `tenant_id`/`project_id` RLS.
 
 | Table | Purpose |
 |---|---|
-| `schema_migrations` | sqlx migration ledger (owner role) |
+| `_sqlx_migrations` | sqlx migration ledger (owner role) |
 | `installation_settings` | Installation config |
 | `platform_keys` | Cell/platform-scoped keys: config snapshot signing, platform KEK (ADR-0082 §2) |
 | `state_epoch` | Crash epoch counter (ADR-0073) |

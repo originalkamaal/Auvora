@@ -1,0 +1,24 @@
+[package]
+name = "auvora-store"
+description = "PostgreSQL persistence with enforced tenant isolation (ADR-0017)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+auvora-core.workspace = true
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "postgres", "uuid", "macros", "migrate"] }
+thiserror = "2.0.21"
+uuid = { version = "1.29.0", default-features = false, features = ["std"] }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+proptest = "1.12.0"
+testcontainers = { version = "0.27", default-features = false, features = ["aws-lc-rs", "blocking"] }
+testcontainers-modules = { version = "0.15.0", default-features = false, features = ["postgres", "blocking"] }
+tokio = { version = "1.54.1", features = ["rt", "macros"] }

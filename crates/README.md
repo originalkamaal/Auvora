@@ -11,4 +11,5 @@ Rust workspace members that make up the `auvora` binary. One crate per plan §5.
 | Path | Purpose |
 |---|---|
 | [`auvora-core/`](auvora-core/) | Domain primitives: prefixed UUIDv7 IDs (ADR-0018), injectable `Clock` (ADR-0047) |
+| [`auvora-store/`](auvora-store/) | PostgreSQL persistence with RLS tenant isolation and isolation property tests (ADR-0017) |
 | [`auvora-server/`](auvora-server/) | The `auvora` binary; wires roles together (ADR-0005) |

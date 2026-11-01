@@ -21,7 +21,7 @@ Isolation has three layers, each sufficient on its own for reads (defense in dep
 |---|---|---|---|
 | **Project-owned** | `tenant_id`, `project_id` | `project_id` **and** `tenant_id` | `principals`, `identifiers`, `oauth_clients`, `sessions_active`, `audit_events` |
 | **Tenant-owned** | `tenant_id` | `tenant_id` | `tenants` (`id` = tenant), `projects`, `environment_groups` |
-| **Cell-local platform** (schema `auvora`) | none | none (platform scope only) | `installation_settings`, `platform_keys`, `state_epoch`, `platform_audit_events`, `schema_migrations` |
+| **Cell-local platform** (schema `auvora`) | none | none (platform scope only) | `installation_settings`, `platform_keys`, `state_epoch`, `platform_audit_events`, `_sqlx_migrations` |
 | **Global directory** (schema `auvora_global`) | per table | none; reachable **only** through the `GlobalDirectory` trait | the closed list in [`cells.md`](cells.md) §4.2: `cell_registry`, `tenant_directory`, `project_directory`, `domain_directory`, `usage_counters`, `console_snapshots` |
 
 - Every table in schemas `auvora` and `auvora_ee` MUST be project-owned or tenant-owned, unless it is on the **cell-local platform allowlist** (§5). Every table in `auvora_global` MUST be in the cells.md §4.2 list (cells.md invariant I-5).
@@ -152,7 +152,7 @@ END $$;
 
 - *Decision (spec-level):* project policies check **both** `project_id` and `tenant_id`. It costs nothing and guards against a mis-scoped project ID from another tenant.
 - `(SELECT …)` wrappers make the planner evaluate the context once per statement (initplan).
-- `tenants` uses `id = (SELECT auvora.ctx_tenant_id())` and is created with a dedicated one-off policy. It is the only hand-written exception, and it is listed in the lint's expected-expression table.
+- `tenants` carries `tenant_id uuid GENERATED ALWAYS AS (id) STORED`, so the standard tenant-level template applies and there is **no** hand-written policy exception. *Decision (implementation, P0).*
 
 ### 4.1 Declaring RLS in migrations
 
@@ -202,7 +202,7 @@ This block is machine-readable. The lint parses the fenced block.
 
 ```toml
 [global_tables]
-"auvora.schema_migrations"      = "migration ledger; owner only"
+"auvora._sqlx_migrations"       = "sqlx migration ledger; owner only (created via the owner's search_path = auvora)"
 "auvora.installation_settings"  = "installation config; platform only"
 "auvora.platform_keys"          = "cell/platform keys (ADR-0082 §2); platform only"
 "auvora.state_epoch"            = "crash epoch (ADR-0073); SELECT granted to auvora_app"
@@ -283,7 +283,7 @@ Dedicated tiers (ADR-0017 §7): `TenantScope` also resolves to a DSN through the
 | P11 | Catalog lint | L1–L8 pass |
 
 **Coverage gate:**
-- *Decision (spec-level):* repository methods are declared through a `repository!` macro that also records them in a static registry.
+- *Decision (implementation, P0):* the gate scans `crates/auvora-store/src/repo/*.rs` for `pub async fn` at test time (no macro needed), and a guard test fails if a new repo module isn't added to the scan list.
 - The test fails if any registered method was not exercised by P1/P2.
 - New tables are covered automatically by P3, P5 and P11.
 
