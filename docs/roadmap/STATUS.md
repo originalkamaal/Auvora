@@ -19,10 +19,10 @@ Update this file in the same commit that completes a deliverable. Link evidence 
 | 7 | CI: fmt, clippy, test, deny, docs, commits | Done (first run pending push) | `.github/workflows/ci.yml` |
 | 8 | Supply chain extras: cargo-vet, SBOM, gitleaks, Renovate, signed releases, reproducible builds, `release-gate` job (ADR-0046, ADR-0001) | Todo | |
 | 9 | CLA process published (ADR-0004) | Todo | |
-| 10 | Domain model spec + ERD (`docs/specs/domain-model.md`) | Todo | |
-| 11 | Tenancy/RLS design spec, incl. isolation property tests plan (ADR-0017) | Todo | |
-| 12 | Cell-ready routing design (`docs/specs/cells.md`, ADR-0019) | Todo | |
-| 13 | Threat-model template + platform threat model; data classification and PII tagging scheme (ADR-0049, ADR-0072) | Todo | |
+| 10 | Domain model spec + ERD | Done (Draft) | [`docs/specs/domain-model.md`](../specs/domain-model.md) |
+| 11 | Tenancy/RLS design spec, incl. isolation property tests plan (ADR-0017) | Done (Draft) | [`docs/specs/tenancy-rls.md`](../specs/tenancy-rls.md) |
+| 12 | Cell-ready routing design (ADR-0019) | Done (Draft) | [`docs/specs/cells.md`](../specs/cells.md) |
+| 13 | Threat-model template + platform threat model; data classification and PII tagging scheme (ADR-0049, ADR-0072) | Done (Draft) | [`docs/threat-models/`](../threat-models/README.md), [`docs/security/data-classification.md`](../security/data-classification.md) |
 | 14 | `auvora-store` skeleton with RLS harness (Testcontainers) | Todo | |
 | 15 | `auvora-crypto` (KeyProvider: local + AWS KMS) and `auvora-jose` skeletons with fuzz targets | Todo | |
 | 16 | Conformance harness (OIDF suite container) and bench harness | Todo | |
